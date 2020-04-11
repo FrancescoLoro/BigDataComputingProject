@@ -22,6 +22,8 @@ def word_count_1(docs):
 
 def word_count_2(docs, K):
     def word_count_per_doc_random(document):
+        print(document)
+        print("\n")
         pairs_dict = {}
         for word in document.split(' '):
             if word not in pairs_dict.keys():
@@ -41,9 +43,12 @@ def word_count_2(docs, K):
         return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
 
     word_count = (docs.flatMap(word_count_per_doc_random)  # <-- MAP PHASE (R1)
-                  .groupByKey()                            # <-- REDUCE PHASE (R1)
-                  .flatMap(gather_pairs)
-                  .reduceByKey(lambda x, y: x + y))        # <-- REDUCE PHASE (R2)
+                  .collect())                          # <-- REDUCE PHASE (R1)
+    print("\n\n\n")
+    print(str(word_count))
+    print("\n\n\n")
+    #   .flatMap(gather_pairs)
+    #   .reduceByKey(lambda x, y: x + y))        # <-- REDUCE PHASE (R2)
     return word_count
 
 
