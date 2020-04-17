@@ -4,47 +4,17 @@ import os
 import random as rand
 
 
-def word_count_per_doc(document):
+def class_count_per_doc(document):
+   # print(len(document.split("\n")))
     pairs_dict = {}
-    for word in document.split(' '):
-        if word not in pairs_dict.keys():
-            pairs_dict[word] = 1
+    for line in document.split("\n"):
+        gamma = line.split(" ")[1]  # Takes just the class not the number
+        if gamma not in pairs_dict.keys():
+            pairs_dict[gamma] = 1
         else:
-            pairs_dict[word] += 1
-    return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
+            pairs_dict[gamma] += 1
+    return [(gamma, pairs_dict[gamma]) for gamma in pairs_dict.keys()]
 
-
-def word_count_1(docs):
-    word_count = (docs.flatMap(word_count_per_doc)  # <-- MAP PHASE (R1)
-                  .reduceByKey(lambda x, y: x + y))  # <-- REDUCE PHASE (R1)
-    return word_count
-
-
-def word_count_2(docs, K):
-    def word_count_per_doc_random(document):
-        pairs_dict = {}
-        for word in document.split(' '):
-            if word not in pairs_dict.keys():
-                pairs_dict[word] = 1
-            else:
-                pairs_dict[word] += 1
-        return [(rand.randint(0, K-1), (key, pairs_dict[key])) for key in pairs_dict.keys()]
-
-    def gather_pairs(pairs):
-        pairs_dict = {}
-        for p in pairs[1]:
-            word, occurrences = p[0], p[1]
-            if word not in pairs_dict.keys():
-                pairs_dict[word] = occurrences
-            else:
-                pairs_dict[word] += occurrences
-        return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
-
-    word_count = (docs.flatMap(word_count_per_doc_random)  # <-- MAP PHASE (R1)
-                  .groupByKey()                            # <-- REDUCE PHASE (R1)
-                  .flatMap(gather_pairs)
-                  .reduceByKey(lambda x, y: x + y))        # <-- REDUCE PHASE (R2)
-    return word_count
 
 
 def class_count_deterministic(docs, K):
@@ -62,8 +32,19 @@ def class_count_deterministic(docs, K):
     return sorted(docs.flatMap(class_count_per_doc_random).groupByKey().mapValues(len).collect())
     # <-- REDUCE PHASE (R1)
 
+def count_in_a_partition(idx, iterator):
+  count = 0
+  for _ in iterator:
+    count += 1
+  return idx, count
 
-def word_count_2_with_partition(docs):
+def count_max_partition(docs):
+    max_partition_size = docs.mapPartitionsWithIndex(count_in_a_partition).collect()
+    del max_partition_size[0::2]
+    return max(max_partition_size)
+
+
+def class_count_with_spark_partition(docs):
     def gather_pairs_partitions(pairs):
         pairs_dict = {}
         for p in pairs:
@@ -74,17 +55,22 @@ def word_count_2_with_partition(docs):
                 pairs_dict[word] += occurrences
         return [(key, pairs_dict[key]) for key in pairs_dict.keys()]
 
-    word_count = (docs.flatMap(word_count_per_doc)  # <-- MAP PHASE (R1)
-                  # <-- REDUCE PHASE (R1)
+    word_count = (docs.flatMap(class_count_per_doc)  # <-- MAP PHASE (R1)  # <-- REDUCE PHASE (R1)
                   .mapPartitions(gather_pairs_partitions)
                   .groupByKey()                              # <-- REDUCE PHASE (R2)
                   .mapValues(lambda vals: sum(vals)))
 
-    return word_count
+    max_count = 0
+    max_class = 0
+    for c, count in word_count.collect():
+        if count > max_count:
+            max_count = count
+            max_class = c
+
+    return (max_class, max_count), count_max_partition(docs)
 
 
 def main():
-
     # Check cmd line param, spark setup
     assert len(sys.argv) == 3, "Usage: python TemplateHW1.py <K> <file_name>"
     conf = SparkConf().setAppName('G39HW1').setMaster("local[*]")
@@ -99,44 +85,18 @@ def main():
     data_path = sys.argv[2]
     assert os.path.isfile(data_path), "File or folder not found"
     docs = sc.textFile(data_path, minPartitions=K).cache()
-    docs.repartition(numPartitions=K)
-
-    print("OUTPUT: \n\nVERSION WITH DETERMINISTIC PARTITIONS")
+    docs = docs.repartition(numPartitions=K)
 
     # CLASS COUNT
+    print("OUTPUT: \n\nVERSION WITH DETERMINISTIC PARTITIONS")
     print("Number of distinct words in the documents = ",
           str(class_count_deterministic(docs, K)))
 
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # # SETTING GLOBAL VARIABLES
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # numdocs = docs.count()
-    # print("Number of documents = ", numdocs)
-
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # # STANDARD WORD COUNT with reduceByKey
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # print("Number of distinct words in the documents = ",
-    #       word_count_1(docs).count())
-
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # # IMPROVED WORD COUNT with groupByKey
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # print("Number of distinct words in the documents = ",
-    #       word_count_2(docs, K).count())
-
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # # IMPROVED WORD COUNT with mapPartitions
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # wc = word_count_2_with_partition(docs)
-    # print("Number of distinct words in the documents = ", wc.count())
-
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # # COMPUTE AVERAGE WORD LENGTH
-    # # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
-    # average_word_len = wc.keys().map(lambda x: (x, len(x))).values().mean()
-    # print("Average word length = ", average_word_len)
-
+    # CLASS COUNT WITH SPARK PARTITIONS
+    print("OUTPUT: \n\nVERSION WITH SPARK PARTITIONS\n")
+    max_count, max_partition_size  = class_count_with_spark_partition(docs)
+    print("Most frequent class = ", str(max_count))
+    print("Max partition size = ", max_partition_size)
 
 if __name__ == "__main__":
     main()
