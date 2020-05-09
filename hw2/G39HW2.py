@@ -75,28 +75,30 @@ def kCenterMPD(S, k):
     :return: Farthest-First Traversal algorithm result
     """
     assert k < len(S), "k is less than |S|"
-    C = [S[0]]
+    C = [S[0]]  # first centroid
     S_dist = [math.inf for si in S]  # initial distances of si from C
-    S_dist_argmax = S[0]  # first element with max distance
+    sj_max = S[0]  # first element with max distance
     S_dist[0] = 0  # d(S[0], C) is 0
 
     for i in range(1, k):
         max_distance = 0
         j_max = -1
 
-        # Find the point ci ∈ S − C that maximizes d(ci, C)
+        # Find the point sj ∈ S − C that maximizes d(sj, C)
         for j, sj in enumerate(S):
-            if S_dist[j] == 0:  # element of centroid
+            if S_dist[j] == 0:              # sj is in C, skip
                 continue
-            cur_dist = min(distance.euclidean(sj, C[-1]), S_dist[j])
-            S_dist[j] = cur_dist  # save distances of sj from C
-            if cur_dist > max_distance:
-                S_dist_argmax = sj
-                max_distance = cur_dist
-                j_max = j
-        # assert S_dist_argmax not in C, "try to insert in C an element of C"
-        C.append(S_dist_argmax)
-        S_dist[j_max] = 0  # set distance of new centroid from C to 0
+            cur_dist = min(distance.euclidean(sj, C[-1]), S_dist[j])  # d(sj, C)
+            S_dist[j] = cur_dist            # update sj distance from C
+            if cur_dist > max_distance:     # check if sj is the farthest element from C
+                sj_max = sj                 # save the farthest element
+                max_distance = cur_dist     # update the max distance of the element
+                j_max = j                   # update the index of the farthest element
+        # assert sj_max not in C, "try to insert in C an element of C"
+
+        # add the farthest element to centroid and update it's distance from C to 0
+        C.append(sj_max)        # add the farthest element to C
+        S_dist[j_max] = 0       # set distance of the new centroid from C to 0, cause it has been added to C
     return C
 
 
