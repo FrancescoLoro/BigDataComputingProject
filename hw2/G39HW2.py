@@ -3,6 +3,18 @@ import math
 import random
 
 
+def readTuplesSeq(inputfile):
+    points = list()
+    f = open(inputfile, "r")
+    if f.mode == "r":
+        for i in f:
+            line = i.split(",")
+            t = tuple(float(dim) for dim in line)
+            points.append(t)
+    f.close()
+    return points
+
+
 def exactMPD(S):
     """
         receives in input a set of points S and returns the max distance between two points in S.
@@ -13,8 +25,10 @@ def exactMPD(S):
     max_dist = 0
     for i in S:
         for j in S:
-            if i == j: continue
-            curr_dist = distance.euclidean(i, j)   # numpy version: numpy.linalg.norm(a-b)
+            if i == j:
+                continue
+            # numpy version: numpy.linalg.norm(a-b)
+            curr_dist = distance.euclidean(i, j)
             if max_dist < curr_dist:
                 max_dist = curr_dist
     return max_dist
@@ -56,10 +70,10 @@ def kCenterMPD(S, k):
     C = [S[0]]
     # C += [argmax_distance(S[1:], C) for i in range(1, k)]
     for i in range(1, k):
-        ci = argmax_distance(S[1:], C)  # Find the point ci ∈ S − C that maximizes d(ci, C)
+        # Find the point ci ∈ S − C that maximizes d(ci, C)
+        ci = argmax_distance(S[1:], C)
         C.append(ci)
     return C
-
 
 
 def argmax_distance(S, C):
@@ -79,7 +93,8 @@ def argmax_distance(S, C):
         cur_dist = math.inf
         for j in C:
             cur_dist = min(cur_dist, distance.euclidean(ci, j))
-        print("  checking d({}, {}) = {} vs {} with max_dist = {}".format(ci, C, cur_dist, argmax_dist, max_dist))
+        print("  checking d({}, {}) = {} vs {} with max_dist = {}".format(
+            ci, C, cur_dist, argmax_dist, max_dist))
         if max_dist < cur_dist:
             print("  argmax is {}".format(ci))
             max_dist = cur_dist
@@ -89,6 +104,7 @@ def argmax_distance(S, C):
 
 
 if __name__ == "__main__":
+
     S1 = [(0, 0), (10, 10), (1, 1), (5, 5), (10, 0)]
     S2 = [(0, 0)]
     S3 = [0, 10, 1, 5, 10]
