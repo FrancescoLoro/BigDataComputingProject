@@ -23,8 +23,8 @@ def exactMPD(S):
     """
         receives in input a set of points S and returns the max distance between two points in S.
 
-    :param S: set of points
-    :return: max distance between two points
+    :param S: a set of points S.
+    :return: the max distance between two points in S.
     """
 
     max_dist = 0
@@ -76,38 +76,28 @@ def kCenterMPD(S, k):
     """
     assert k < len(S), "k is less than |S|"
     C = [S[0]]
-    # C += [argmax_distance(S[1:], C) for i in range(1, k)]
+    S_dist = [math.inf for si in S]  # initial distances of si from C
+    S_dist_argmax = S[0]  # first element with max distance
+    S_dist[0] = 0  # d(S[0], C) is 0
+
     for i in range(1, k):
+        max_distance = 0
+        j_max = -1
+
         # Find the point ci ∈ S − C that maximizes d(ci, C)
-        ci = argmax_distance(S[1:], C)
-        C.append(ci)
+        for j, sj in enumerate(S):
+            if S_dist[j] == 0:  # element of centroid
+                continue
+            cur_dist = min(distance.euclidean(sj, C[-1]), S_dist[j])
+            S_dist[j] = cur_dist  # save distances of sj from C
+            if cur_dist > max_distance:
+                S_dist_argmax = sj
+                max_distance = cur_dist
+                j_max = j
+        # assert S_dist_argmax not in C, "try to insert in C an element of C"
+        C.append(S_dist_argmax)
+        S_dist[j_max] = 0  # set distance of new centroid from C to 0
     return C
-
-
-def argmax_distance(S, C):
-    """
-    Find the point si ∈ S − C that maximizes d(si, C)
-    :param S:
-    :param C:
-    :return:
-    """
-    max_dist = 0
-    argmax_dist = None
-
-    for si in S:
-        if si in C:
-            continue
-
-        cur_dist = math.inf
-        for cj in C:
-            cur_dist = min(cur_dist, distance.euclidean(si, cj))
-        # print("  checking d({}, {}) = {} vs {} with max_dist = {}".format(si, C, cur_dist, argmax_dist, max_dist))
-        if max_dist < cur_dist:
-            # print("  argmax is {}".format(si))
-            max_dist = cur_dist
-            argmax_dist = si
-    # print(" return {}".format(argmax_dist))
-    return argmax_dist
 
 
 if __name__ == "__main__":
@@ -123,18 +113,20 @@ if __name__ == "__main__":
     assert os.path.isfile(data_path), "File or folder not found"
     points = readTuplesSeq(data_path)
 
+
+
     # print("\nEXACT ALGORITHM")
     # start = timeit.default_timer()
     # print("Max distance = {}".format(exactMPD(points)))
     # stop = timeit.default_timer()
     # print("Running time = {}".format(stop - start))
 
-    print("\n2-APPROXIMATION ALGORITHM")
-    print("k = {}".format(K))
-    start = timeit.default_timer()
-    print("Max distance = {}".format(twoApproxMPD(points, K)))
-    stop = timeit.default_timer()
-    print("Running time = {}".format(stop - start))
+    # print("\n2-APPROXIMATION ALGORITHM")
+    # print("k = {}".format(K))
+    # start = timeit.default_timer()
+    # print("Max distance = {}".format(twoApproxMPD(points, K)))
+    # stop = timeit.default_timer()
+    # print("Running time = {}".format(stop - start))
 
     print("\nk-CENTER-BASED ALGORITHM")
     print("k = {}".format(K))
