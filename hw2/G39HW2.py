@@ -1,6 +1,10 @@
 from scipy.spatial import distance
+from tqdm import tqdm
 import math
 import random
+import sys
+import os
+import timeit
 
 
 def readTuplesSeq(inputfile):
@@ -19,9 +23,10 @@ def exactMPD(S):
     """
         receives in input a set of points S and returns the max distance between two points in S.
 
-    :param S:
-    :return:
+    :param S: set of points
+    :return: max distance between two points
     """
+
     max_dist = 0
     for i in S:
         for j in S:
@@ -42,16 +47,19 @@ def twoApproxMPD(S, k):
          university IDs as a value), and use that value as a seed for the random generator.
          For Python users: you can use the method random.seed(SEED) from the module random.
 
-    :param S:
-    :param k:
-    :return:
+    :param S: set of points
+    :param k: number of points
+    :return: maximum distance over between k points and all S points
     """
+    assert k < len(S), "k is less than |S|"
     max_dist = 0
-    random.seed(666)
+    random.seed(1237770)
+    # TODO scegli i punti random senza fare shuffle
     random.shuffle(S)
     # print("{} {}".format(str(S[:k]), str(S[k:])))
     for i in S[:k]:
         for j in S:
+            # TODO toglia la radice dalla dist euclideiana e calcola solo alla fine
             max_dist = max(max_dist, distance.euclidean(i, j))
     return max_dist
 
@@ -62,11 +70,11 @@ def kCenterMPD(S, k):
         selected from S using the Farthest-First Traversal algorithm. It is important that kCenterMPD(S,k)
         run in O(|S|*k) time (see exercise on Slide 23 of the set of Slides on Clustering, Part 2.
 
-    :param S:
-    :param k:
-    :return:
+    :param S: set of points
+    :param k: number of points
+    :return: Farthest-First Traversal algorithm result
     """
-    assert k < len(S)
+    assert k < len(S), "k is less than |S|"
     C = [S[0]]
     # C += [argmax_distance(S[1:], C) for i in range(1, k)]
     for i in range(1, k):
@@ -78,54 +86,59 @@ def kCenterMPD(S, k):
 
 def argmax_distance(S, C):
     """
-    Find the point ci ∈ S − C that maximizes d(ci, C)
+    Find the point si ∈ S − C that maximizes d(si, C)
     :param S:
     :param C:
     :return:
     """
     max_dist = 0
     argmax_dist = None
-    # print("{} {}".format(str(S[:k]), str(S[k:])))
-    for ci in S:
-        if ci in C:
+
+    for si in S:
+        if si in C:
             continue
 
         cur_dist = math.inf
-        for j in C:
-            cur_dist = min(cur_dist, distance.euclidean(ci, j))
-        print("  checking d({}, {}) = {} vs {} with max_dist = {}".format(
-            ci, C, cur_dist, argmax_dist, max_dist))
+        for cj in C:
+            cur_dist = min(cur_dist, distance.euclidean(si, cj))
+        # print("  checking d({}, {}) = {} vs {} with max_dist = {}".format(si, C, cur_dist, argmax_dist, max_dist))
         if max_dist < cur_dist:
-            print("  argmax is {}".format(ci))
+            # print("  argmax is {}".format(si))
             max_dist = cur_dist
-            argmax_dist = ci
-    print(" return {}".format(argmax_dist))
+            argmax_dist = si
+    # print(" return {}".format(argmax_dist))
     return argmax_dist
 
 
 if __name__ == "__main__":
 
-    S1 = [(0, 0), (10, 10), (1, 1), (5, 5), (10, 0)]
-    S2 = [(0, 0)]
-    S3 = [0, 10, 1, 5, 10]
+    # Check cmd line param, spark setup
+    assert len(sys.argv) == 3, "Usage: python G39HW2.py <K> <path-to-file>"
+    # Read number of partitions
+    K = sys.argv[1]
+    assert K.isdigit(), "K must be an integer"
+    K = int(K)
+    # Read input file and subdivide it into K random partitions
+    data_path = sys.argv[2]
+    assert os.path.isfile(data_path), "File or folder not found"
+    points = readTuplesSeq(data_path)
 
-    assert exactMPD(S1) == math.sqrt(200)
-    assert exactMPD(S2) == 0
-    assert exactMPD(S3) == 10
+    # print("\nEXACT ALGORITHM")
+    # start = timeit.default_timer()
+    # print("Max distance = {}".format(exactMPD(points)))
+    # stop = timeit.default_timer()
+    # print("Running time = {}".format(stop - start))
 
-    random.seed(5)
-    print("Random: {}".format(random.uniform(1, 20)))
-    random.seed(5)
-    print("Random: {}".format(random.uniform(1, 20)))
-    random.seed(5)
-    print("Random: {}".format(random.uniform(1, 20)))
+    print("\n2-APPROXIMATION ALGORITHM")
+    print("k = {}".format(K))
+    start = timeit.default_timer()
+    print("Max distance = {}".format(twoApproxMPD(points, K)))
+    stop = timeit.default_timer()
+    print("Running time = {}".format(stop - start))
 
-    print("max = {} ".format(twoApproxMPD(S1, 3)))
-    print("max = {} ".format(twoApproxMPD(S1, 3)))
-    print("max = {} ".format(twoApproxMPD(S1, 3)))
-    print("max = {} ".format(twoApproxMPD(S1, 3)))
-
-    print("C: {} in {}".format(kCenterMPD(S1, 2), S1))
-    print("C: {} in {}".format(kCenterMPD(S1, 3), S1))
-    print("C: {} in {}".format(kCenterMPD(S1, 4), S1))
-    print("C: {} in {}".format(kCenterMPD(S3, 2), S3))
+    print("\nk-CENTER-BASED ALGORITHM")
+    print("k = {}".format(K))
+    start = timeit.default_timer()
+    print("Max distance = {}".format(exactMPD(kCenterMPD(points, K))))
+    stop = timeit.default_timer()
+    print("Running time = {}".format(stop - start))
