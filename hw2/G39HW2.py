@@ -33,10 +33,10 @@ def exactMPD(S):
             if i == j:
                 continue
             # numpy version: numpy.linalg.norm(a-b)
-            curr_dist = distance.euclidean(i, j)
+            curr_dist = quad_distance(i, j)
             if max_dist < curr_dist:
                 max_dist = curr_dist
-    return max_dist
+    return math.sqrt(max_dist)
 
 
 def twoApproxMPD(S, k):
@@ -59,9 +59,8 @@ def twoApproxMPD(S, k):
     # print("{} {}".format(str(S[:k]), str(S[k:])))
     for i in S[:k]:
         for j in S:
-            # TODO toglia la radice dalla dist euclideiana e calcola solo alla fine
-            max_dist = max(max_dist, distance.euclidean(i, j))
-    return max_dist
+            max_dist = max(max_dist, quad_distance(i, j))
+    return math.sqrt(max_dist)
 
 
 def kCenterMPD(S, k):
@@ -88,7 +87,7 @@ def kCenterMPD(S, k):
         for j, sj in enumerate(S):
             if S_dist[j] == 0:              # sj is in C, skip
                 continue
-            cur_dist = min(distance.euclidean(sj, C[-1]), S_dist[j])  # d(sj, C)
+            cur_dist = min(quad_distance(sj, C[-1]), S_dist[j])  # d(sj, C)
             S_dist[j] = cur_dist            # update sj distance from C
             if cur_dist > max_distance:     # check if sj is the farthest element from C
                 sj_max = sj                 # save the farthest element
@@ -100,6 +99,14 @@ def kCenterMPD(S, k):
         C.append(sj_max)        # add the farthest element to C
         S_dist[j_max] = 0       # set distance of the new centroid from C to 0, cause it has been added to C
     return C
+
+
+def quad_distance(p1, p2):
+    assert len(p1) == len(p2), "input points must have the same num of components"
+    dist = 0
+    for i in range(len(p1)):
+        dist += (p1[i] - p2[i])*(p1[i] - p2[i])
+    return dist
 
 
 if __name__ == "__main__":
@@ -117,11 +124,11 @@ if __name__ == "__main__":
 
 
 
-    # print("\nEXACT ALGORITHM")
-    # start = timeit.default_timer()
-    # print("Max distance = {}".format(exactMPD(points)))
-    # stop = timeit.default_timer()
-    # print("Running time = {}".format(stop - start))
+    print("\nEXACT ALGORITHM")
+    start = timeit.default_timer()
+    print("Max distance = {}".format(exactMPD(points)))
+    stop = timeit.default_timer()
+    print("Running time = {}".format(stop - start))
 
     # print("\n2-APPROXIMATION ALGORITHM")
     # print("k = {}".format(K))
