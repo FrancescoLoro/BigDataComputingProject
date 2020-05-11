@@ -1,4 +1,4 @@
-from scipy.spatial import distance
+# from scipy.spatial import distance # distance.euclidean
 from tqdm import tqdm
 import math
 import random
@@ -26,14 +26,10 @@ def exactMPD(S):
     :param S: a set of points S.
     :return: the max distance between two points in S.
     """
-
     max_dist = 0
-    for i in S:
-        for j in S:
-            if i == j:
-                continue
-            # numpy version: numpy.linalg.norm(a-b)
-            curr_dist = quad_distance(i, j)
+    for i in range(len(S)-1):
+        for j in range(i+1, len(S)):  # d(S[i],S[j]) = d(S[j],S[i]) therefore skip it.
+            curr_dist = quad_distance(S[i], S[j])  # does not execute the sqrt
             if max_dist < curr_dist:
                 max_dist = curr_dist
     return math.sqrt(max_dist)
@@ -54,12 +50,12 @@ def twoApproxMPD(S, k):
     assert k < len(S), "k is less than |S|"
     max_dist = 0
     random.seed(1237770)
-    # TODO scegli i punti random senza fare shuffle
-    random.shuffle(S)
-    # print("{} {}".format(str(S[:k]), str(S[k:])))
-    for i in S[:k]:
-        for j in S:
-            max_dist = max(max_dist, quad_distance(i, j))
+    centroids = random.sample(S, k)
+    for ci in centroids:
+        for sj in S:
+            cur_dist = quad_distance(ci, sj)
+            if max_dist < cur_dist:
+                max_dist = cur_dist
     return math.sqrt(max_dist)
 
 
@@ -74,10 +70,10 @@ def kCenterMPD(S, k):
     :return: Farthest-First Traversal algorithm result
     """
     assert k < len(S), "k is less than |S|"
-    C = [S[0]]  # first centroid
-    S_dist = [math.inf for si in S]  # initial distances of si from C
-    sj_max = S[0]  # first element with max distance
-    S_dist[0] = 0  # d(S[0], C) is 0
+    C = [S[0]]                          # first centroid
+    S_dist = [math.inf for si in S]     # init distances of si from C
+    sj_max = S[0]                       # first element with max distance
+    S_dist[0] = 0                       # d(S[0], C) is 0
 
     for i in range(1, k):
         max_distance = 0
@@ -109,20 +105,22 @@ def quad_distance(p1, p2):
     return dist
 
 
+def euclidean(p1, p2):
+    return math.sqrt(quad_distance(p1, p2))
+
+
 if __name__ == "__main__":
 
     # Check cmd line param, spark setup
     assert len(sys.argv) == 3, "Usage: python G39HW2.py <K> <path-to-file>"
-    # Read number of partitions
-    K = sys.argv[1]
+
+    K = sys.argv[1]  # Read number of partitions
     assert K.isdigit(), "K must be an integer"
     K = int(K)
-    # Read input file and subdivide it into K random partitions
+
     data_path = sys.argv[2]
     assert os.path.isfile(data_path), "File or folder not found"
-    points = readTuplesSeq(data_path)
-
-
+    points = readTuplesSeq(data_path)  # Read input tuples
 
     print("\nEXACT ALGORITHM")
     start = timeit.default_timer()
@@ -130,12 +128,12 @@ if __name__ == "__main__":
     stop = timeit.default_timer()
     print("Running time = {}".format(stop - start))
 
-    # print("\n2-APPROXIMATION ALGORITHM")
-    # print("k = {}".format(K))
-    # start = timeit.default_timer()
-    # print("Max distance = {}".format(twoApproxMPD(points, K)))
-    # stop = timeit.default_timer()
-    # print("Running time = {}".format(stop - start))
+    print("\n2-APPROXIMATION ALGORITHM")
+    print("k = {}".format(K))
+    start = timeit.default_timer()
+    print("Max distance = {}".format(twoApproxMPD(points, K)))
+    stop = timeit.default_timer()
+    print("Running time = {}".format(stop - start))
 
     print("\nk-CENTER-BASED ALGORITHM")
     print("k = {}".format(K))
