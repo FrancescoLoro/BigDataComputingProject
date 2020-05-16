@@ -50,7 +50,7 @@ def twoApproxMPD(S, k):
     """
     assert k < len(S), "k >= |S|"
     max_dist = 0
-    random.seed(1237770)
+    random.seed(1206597)
     centroids = random.sample(S, k)  # select k random centroids without repetition from S
     for ci in centroids:
         for sj in S:
@@ -71,7 +71,7 @@ def kCenterMPD(S, k):
     :return: Farthest-First Traversal algorithm result
     """
     assert k < len(S), "k < |S| is needed, but k >= |S| is found"
-    random.seed(1237770)
+    random.seed(1206597)
     c0 = random.choice(S)
     C = [c0]                            # first centroid randomly selected
     S_dist = [math.inf for si in S]     # init distances of si from C
