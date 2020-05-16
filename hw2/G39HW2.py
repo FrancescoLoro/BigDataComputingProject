@@ -28,7 +28,8 @@ def exactMPD(S):
     """
     max_dist = 0
     for i in range(len(S)-1):
-        for j in range(i+1, len(S)):  # d(S[i],S[j]) = d(S[j],S[i]) therefore skip it.
+        # d(S[i],S[j]) = d(S[j],S[i]) therefore skip it.
+        for j in range(i+1, len(S)):
             curr_dist = quad_distance(S[i], S[j])  # does not execute the sqrt
             if max_dist < curr_dist:
                 max_dist = curr_dist
@@ -51,13 +52,15 @@ def twoApproxMPD(S, k):
     assert k < len(S), "k >= |S|"
     max_dist = 0
     random.seed(1206597)
-    centroids = random.sample(S, k)  # select k random centroids without repetition from S
+    # select k random centroids without repetition from S
+    centroids = random.sample(S, k)
     for ci in centroids:
         for sj in S:
             cur_dist = quad_distance(ci, sj)  # compare squared distances
             if max_dist < cur_dist:
                 max_dist = cur_dist
-    return math.sqrt(max_dist)  # root of squared distance == euclidean distance
+    # root of squared distance == euclidean distance
+    return math.sqrt(max_dist)
 
 
 def kCenterMPD(S, k):
@@ -86,7 +89,8 @@ def kCenterMPD(S, k):
         for j, sj in enumerate(S):
             if S_dist[j] == 0:              # sj is already in C, skip
                 continue
-            cur_dist = min(quad_distance(sj, C[-1]), S_dist[j])  # d(sj, C), C[-1] is the last added centroid
+            # d(sj, C), C[-1] is the last added centroid
+            cur_dist = min(quad_distance(sj, C[-1]), S_dist[j])
             S_dist[j] = cur_dist            # update sj distance from C
             if cur_dist > max_distance:     # check if sj is the farthest element from C
                 sj_max = sj                 # save the farthest element
@@ -95,7 +99,8 @@ def kCenterMPD(S, k):
 
         # add the farthest element to centroid and update it's distance from C to 0
         C.append(sj_max)        # add the farthest element to C
-        S_dist[j_max] = 0       # set distance of the new centroid from C to 0, cause it has been added to C
+        # set distance of the new centroid from C to 0, cause it has been added to C
+        S_dist[j_max] = 0
     return C
 
 
@@ -105,7 +110,8 @@ def quad_distance(p1, p2):
     :param p2: a tuple of numbers, with the same length of p1
     :return: squared distance between the points, zero if the tuple have no elements
     """
-    assert len(p1) == len(p2), "input points must have the same num of components"
+    assert len(p1) == len(
+        p2), "input points must have the same num of components"
     dist = 0
     for i in range(len(p1)):
         dist += (p1[i] - p2[i])*(p1[i] - p2[i])
@@ -127,13 +133,13 @@ if __name__ == "__main__":
     # Check cmd line param, spark setup
     assert len(sys.argv) == 3, "Usage: python G39HW2.py <K> <path-to-file>"
 
-    K = sys.argv[1]  # Read number of partitions
-    assert K.isdigit(), "K must be an integer"
-    K = int(K)
-
-    data_path = sys.argv[2]
+    data_path = sys.argv[1]
     assert os.path.isfile(data_path), "File or folder not found"
     points = readTuplesSeq(data_path)  # Read input tuples
+
+    K = sys.argv[2]  # Read number of partitions
+    assert K.isdigit(), "K must be an integer"
+    K = int(K)
 
     print("\nEXACT ALGORITHM")
     start = timeit.default_timer()
