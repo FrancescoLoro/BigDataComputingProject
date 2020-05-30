@@ -55,3 +55,74 @@ def runSequential(points, k):
                 break
 
     return result
+
+"""
+    implements the 4-approximation MapReduce algorithm for diversity maximization described above. 
+    
+    :param pointsRDD: set of points
+    :param k: number of points to extract from each partition
+    :param L: number of partitions
+    :return: list of tuples of extracted points
+"""
+def runMapReduce(pointsRDD,k,L):
+    return 0 
+""" 
+    computes the average distance between all pairs of points.
+    :param pointsSet: set of points
+    :return: average distance
+"""
+def measure(pointsSet):
+    return 0 
+
+
+if __name__ == "__main__":
+
+    # Check cmd line param, spark setup
+    assert len(sys.argv) == 3, "Usage: python G39HW3.py <path-to-file> <k> <L>"
+
+    #spark initilization 
+    conf = SparkConf().setAppName('G39HW3')
+    sc = SparkContext(conf=conf)
+
+    k = sys.argv[2]  # Diversity maximization parameter
+    assert k.isdigit(), "K must be an integer"
+    k = int(k)
+
+    L = sys.argv[3]  # Read number of partitions
+    assert K.isdigit(), "L must be an integer"
+    L = int(L)
+
+    inputPath = sys.argv[1]
+    assert os.path.isfile(inputPath), "File or folder not found"
+    inputPoints = sc.textFile(inputPath).map(f).repartition(L).cache();  # Read input tuples
+
+    print("\nNumber of points = {}").format(len(inputPoints))
+    print("\nk = {}").format(k)
+    print("\nL = {}").format(L)
+    print("\nInitialization time = {}").format(k)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
