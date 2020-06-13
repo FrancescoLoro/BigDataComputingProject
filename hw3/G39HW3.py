@@ -115,8 +115,6 @@ def set_kCenterMDP(k):
         """
 
         S = list(S)  # transform intertools.chain into list
-        ctx = TaskContext()
-        print("In partition {}, S size : {}".format(ctx.partitionId(), len(S)))
         assert k < len(S), "k < |S| is needed, but k >= |S| is found"
         random.seed(1206597)
         c0 = random.choice(S)  # correct version
@@ -202,7 +200,7 @@ if __name__ == "__main__":
     L = int(L)
 
     inputPath = sys.argv[1]
-    assert os.path.isfile(inputPath), "File or folder not found"
+    # assert os.path.isfile(inputPath), "File or folder not found"
 
     # inputPoints = sc.textFile(inputPath).map(readTuplesSeq).repartition(L).cache()  # Read input tuples
 
