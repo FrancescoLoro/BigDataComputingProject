@@ -4,14 +4,22 @@
 # &&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&&
 
 # Import Packages
-import math
+import os
+import sys
+
+from pyspark import SparkConf, SparkContext
 
 
-# Compute the squared euclidean distance (to avoid a sqrt computation)
 def squared_euclidean_dist(p, q):
+    """
+    Compute the squared euclidean distance (to avoid a sqrt computation)
+    :param p:
+    :param q:
+    :return:
+    """
     tmp = 0
     for i in range(0, len(p) - 1):
-        tmp = tmp + (p[i] - q[i]) ** 2
+        tmp += (p[i] - q[i]) ** 2
     return tmp
 
 
@@ -32,9 +40,9 @@ def runSequential(points, k):
         maxI = 0
         maxJ = 0
         for i in range(n):
-            if candidates[i] == True:  # Check if i is already a solution
+            if candidates[i]:  # Check if i is already a solution
                 for j in range(n):
-                    if candidates[j] == True:  # Check if j is already a solution
+                    if candidates[j]:  # Check if j is already a solution
                         # use squared euclidean distance to avoid an sqrt computation!
                         d = squared_euclidean_dist(points[i], points[j])
                         if d > maxDist:
@@ -50,28 +58,31 @@ def runSequential(points, k):
     # the input points looking for a point not in the result set.
     if k % 2 != 0:
         for i in range(n):
-            if candidates[i] == True:
+            if candidates[i]:
                 result.append(points[i])
                 break
 
     return result
 
-"""
-    implements the 4-approximation MapReduce algorithm for diversity maximization described above. 
-    
-    :param pointsRDD: set of points
-    :param k: number of points to extract from each partition
-    :param L: number of partitions
-    :return: list of tuples of extracted points
-"""
-def runMapReduce(pointsRDD,k,L):
-    return 0 
-""" 
-    computes the average distance between all pairs of points.
-    :param pointsSet: set of points
-    :return: average distance
-"""
+
+def runMapReduce(pointsRDD, k, L):
+    """
+        implements the 4-approximation MapReduce algorithm for diversity maximization described above.
+
+        :param pointsRDD: set of points
+        :param k: number of points to extract from each partition
+        :param L: number of partitions
+        :return: list of tuples of extracted points
+    """
+    return 0
+
+
 def measure(pointsSet):
+    """
+        computes the average distance between all pairs of points.
+        :param pointsSet: set of points
+        :return: average distance
+    """
     return 0 
 
 
@@ -80,7 +91,7 @@ if __name__ == "__main__":
     # Check cmd line param, spark setup
     assert len(sys.argv) == 3, "Usage: python G39HW3.py <path-to-file> <k> <L>"
 
-    #spark initilization 
+    # spark initilization
     conf = SparkConf().setAppName('G39HW3')
     sc = SparkContext(conf=conf)
 
@@ -89,40 +100,14 @@ if __name__ == "__main__":
     k = int(k)
 
     L = sys.argv[3]  # Read number of partitions
-    assert K.isdigit(), "L must be an integer"
+    assert L.isdigit(), "L must be an integer"
     L = int(L)
 
     inputPath = sys.argv[1]
     assert os.path.isfile(inputPath), "File or folder not found"
-    inputPoints = sc.textFile(inputPath).map(f).repartition(L).cache();  # Read input tuples
+    inputPoints = sc.textFile(inputPath).map(f).repartition(L).cache()  # Read input tuples
 
-    print("\nNumber of points = {}").format(len(inputPoints))
-    print("\nk = {}").format(k)
-    print("\nL = {}").format(L)
-    print("\nInitialization time = {}").format(k)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    print("\nNumber of points = {}".format(len(inputPoints)))
+    print("\nk = {}".format(k))
+    print("\nL = {}".format(L))
+    print("\nInitialization time = {}".format(k))
