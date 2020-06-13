@@ -63,7 +63,7 @@ def twoApproxMPD(S, k):
     return math.sqrt(max_dist)
 
 
-def kCenterMPD(S, k):
+def kCenterMPD(S, k=10):
     """
         receives in input a set of points S and an integer k < |S|, and returns a set C of k centers
         selected from S using the Farthest-First Traversal algorithm. It is important that kCenterMPD(S,k)

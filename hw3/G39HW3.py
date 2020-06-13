@@ -6,27 +6,28 @@
 # Import Packages
 import os
 import sys
+import random
+import math
+import timeit
 
-from pyspark import SparkConf, SparkContext
+from pyspark import SparkConf, SparkContext, TaskContext
+
+# Compute the squared euclidean distance (to avoid a sqrt computation)
 
 
 def squared_euclidean_dist(p, q):
-    """
-    Compute the squared euclidean distance (to avoid a sqrt computation)
-    :param p:
-    :param q:
-    :return:
-    """
     tmp = 0
-    for i in range(0, len(p) - 1):
-        tmp += (p[i] - q[i]) ** 2
+    for i in range(0, len(p)):
+        tmp = tmp + (p[i]-q[i])**2
     return tmp
-
 
 # runSequential receives a list of tuples and an integer k.
 # It comptues a 2-approximation of k points for diversity maximization
 # based on matching.
+
+
 def runSequential(points, k):
+
     n = len(points)
     if k >= n:
         return points
@@ -40,9 +41,9 @@ def runSequential(points, k):
         maxI = 0
         maxJ = 0
         for i in range(n):
-            if candidates[i]:  # Check if i is already a solution
-                for j in range(n):
-                    if candidates[j]:  # Check if j is already a solution
+            if candidates[i] == True:  # Check if i is already a solution
+                for j in range(i+1, n):
+                    if candidates[j] == True:  # Check if j is already a solution
                         # use squared euclidean distance to avoid an sqrt computation!
                         d = squared_euclidean_dist(points[i], points[j])
                         if d > maxDist:
@@ -58,11 +59,93 @@ def runSequential(points, k):
     # the input points looking for a point not in the result set.
     if k % 2 != 0:
         for i in range(n):
-            if candidates[i]:
+            if candidates[i] == True:
                 result.append(points[i])
                 break
 
     return result
+
+
+def quad_distance(p1, p2):
+    """
+    :param p1: a tuple of numbers
+    :param p2: a tuple of numbers, with the same length of p1
+    :return: squared distance between the points, zero if the tuple have no elements
+    """
+    assert len(p1) == len(
+        p2), "input points must have the same num of components"
+    dist = 0
+    for i in range(len(p1)):
+        dist += (p1[i] - p2[i])*(p1[i] - p2[i])
+    return dist
+
+
+def euclidean(p1, p2):
+    """
+    Calculate the euclidean distance between two points
+    :param p1: a tuple of numbers
+    :param p2: a tuple of numbers, with the same length of p1
+    :return: euclidean distance between p1 and p2, zero if p1 and p2 has no elements
+    """
+    return math.sqrt(quad_distance(p1, p2))
+
+
+def readTuplesSeq(inputfile):
+    points = list()
+    f = open(inputfile, "r")
+    if f.mode == "r":
+        for i in f:
+            line = i.split(",")
+            t = tuple(float(dim) for dim in line)
+            points.append(t)
+    f.close()
+    return points
+
+
+def set_kCenterMDP(k):
+    def tmp(S):
+        """
+            receives in input a set of points S and an integer k < |S|, and returns a set C of k centers
+            selected from S using the Farthest-First Traversal algorithm. It is important that kCenterMPD(S,k)
+            run in O(|S|*k) time (see exercise on Slide 23 of the set of Slides on Clustering, Part 2.
+
+        :param S: set of points
+        :param k: number of points
+        :return: Farthest-First Traversal algorithm result
+        """
+
+        S = list(S)  # transform intertools.chain into list
+        ctx = TaskContext()
+        print("In partition {}, S size : {}".format(ctx.partitionId(), len(S)))
+        assert k < len(S), "k < |S| is needed, but k >= |S| is found"
+        random.seed(1206597)
+        c0 = random.choice(S)  # correct version
+        C = [c0]  # first centroid randomly selected
+        S_dist = [math.inf for si in S]  # init distances of si from C
+        sj_max = c0  # first element with max distance
+        S_dist[0] = 0  # d(S[0], C) is 0
+        for i in range(1, k):  # select other k-1 centroids with FFT algorithm
+            max_distance = 0
+            j_max = -1
+
+            # Find the point sj ∈ S − C that maximizes d(sj, C)
+            for j, sj in enumerate(S):
+                if S_dist[j] == 0:  # sj is already in C, skip
+                    continue
+                # d(sj, C), C[-1] is the last added centroid
+                cur_dist = min(quad_distance(sj, C[-1]), S_dist[j])
+                S_dist[j] = cur_dist  # update sj distance from C
+                if cur_dist > max_distance:  # check if sj is the farthest element from C
+                    sj_max = sj  # save the farthest element
+                    max_distance = cur_dist  # update the max distance of the element
+                    j_max = j  # update the index of the farthest element
+
+            # add the farthest element to centroid and update it's distance from C to 0
+            C.append(sj_max)  # add the farthest element to C
+            # set distance of the new centroid from C to 0, cause it has been added to C
+            S_dist[j_max] = 0
+        return C
+    return tmp
 
 
 def runMapReduce(pointsRDD, k, L):
@@ -74,7 +157,17 @@ def runMapReduce(pointsRDD, k, L):
         :param L: number of partitions
         :return: list of tuples of extracted points
     """
-    return 0
+    kCenterMPD = set_kCenterMDP(
+        k)  # setup a kCenterMPD function with k as number of centroid
+    start = timeit.default_timer()
+    coreset = pointsRDD.mapPartitions(kCenterMPD)
+    stop = timeit.default_timer()
+    print("Runtime of Round 1 = {}".format(stop-start))
+    start = timeit.default_timer()
+    coreset = runSequential(coreset.collect(), k)
+    stop = timeit.default_timer()
+    print("Runtime of Round 2 = {}".format(stop-start))
+    return coreset
 
 
 def measure(pointsSet):
@@ -83,17 +176,22 @@ def measure(pointsSet):
         :param pointsSet: set of points
         :return: average distance
     """
-    return 0 
+    mean_dist = 0
+    N = len(pointsSet)
+    # counter = 0
+    for i in range(N):
+        for j in range(i+1, N):
+            mean_dist += euclidean(pointsSet[i], pointsSet[j])
+            # counter += 1
+    # assert counter == N*(N-1)/2, "bad counter"
+    # print("computer {} distances".format(counter))
+    return mean_dist/(N*(N-1)/2)
 
 
 if __name__ == "__main__":
 
     # Check cmd line param, spark setup
-    assert len(sys.argv) == 3, "Usage: python G39HW3.py <path-to-file> <k> <L>"
-
-    # spark initilization
-    conf = SparkConf().setAppName('G39HW3')
-    sc = SparkContext(conf=conf)
+    assert len(sys.argv) == 4, "Usage: python G39HW3.py <path-to-file> <k> <L>"
 
     k = sys.argv[2]  # Diversity maximization parameter
     assert k.isdigit(), "K must be an integer"
@@ -105,9 +203,20 @@ if __name__ == "__main__":
 
     inputPath = sys.argv[1]
     assert os.path.isfile(inputPath), "File or folder not found"
-    inputPoints = sc.textFile(inputPath).map(f).repartition(L).cache()  # Read input tuples
+
+    # inputPoints = sc.textFile(inputPath).map(readTuplesSeq).repartition(L).cache()  # Read input tuples
+
+    # spark initilization
+    start = timeit.default_timer()
+    conf = SparkConf().setAppName('G39HW3')
+    sc = SparkContext(conf=conf)
+    inputPoints = readTuplesSeq(inputPath)
+    inputPointsRDD = sc.parallelize(inputPoints, L).cache()
+    stop = timeit.default_timer()
 
     print("\nNumber of points = {}".format(len(inputPoints)))
     print("\nk = {}".format(k))
     print("\nL = {}".format(L))
-    print("\nInitialization time = {}".format(k))
+    print("\nInitialization time = {}".format(stop - start))
+    print("\nAverage distance = {}".format(
+        measure(runMapReduce(inputPointsRDD, k, L))))
