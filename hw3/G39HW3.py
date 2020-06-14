@@ -90,6 +90,11 @@ def euclidean(p1, p2):
     return math.sqrt(quad_distance(p1, p2))
 
 
+def splitLine(i):
+    line = i.split(",")
+    return tuple(float(dim) for dim in line)
+
+
 def readTuplesSeq(inputfile):
     points = list()
     f = open(inputfile, "r")
@@ -205,16 +210,26 @@ if __name__ == "__main__":
     # inputPoints = sc.textFile(inputPath).map(readTuplesSeq).repartition(L).cache()  # Read input tuples
 
     # spark initilization
-    start = timeit.default_timer()
+    # start = timeit.default_timer()
     conf = SparkConf().setAppName('G39HW3')
     sc = SparkContext(conf=conf)
-    inputPoints = readTuplesSeq(inputPath)
-    inputPointsRDD = sc.parallelize(inputPoints, L).cache()
-    stop = timeit.default_timer()
 
-    print("\nNumber of points = {}".format(len(inputPoints)))
-    print("\nk = {}".format(k))
-    print("\nL = {}".format(L))
-    print("\nInitialization time = {}".format(stop - start))
+    inputPointsRDD = sc.textFile(inputPath).map(
+        splitLine).repartition(L).cache()
+    # # Read file into RDD
+    # lines = sc.textFile(inputPath)
+
+    # # Call collect() to get all data
+    # inputPointsRDD = lines.collect()
+
+    # works in local not on server
+    # inputPoints = readTuplesSeq(inputPath)
+    # inputPointsRDD = sc.parallelize(inputPoints, L).cache()
+    # stop = timeit.default_timer()
+
+    # print("\nNumber of points = {}".format(len(inputPoints)))
+    # print("\nk = {}".format(k))
+    # print("\nL = {}".format(L))
+    # print("\nInitialization time = {}".format(stop - start))
     print("\nAverage distance = {}".format(
         measure(runMapReduce(inputPointsRDD, k, L))))
