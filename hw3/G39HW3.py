@@ -207,29 +207,17 @@ if __name__ == "__main__":
     inputPath = sys.argv[1]
     # assert os.path.isfile(inputPath), "File or folder not found"
 
-    # inputPoints = sc.textFile(inputPath).map(readTuplesSeq).repartition(L).cache()  # Read input tuples
-
     # spark initilization
-    # start = timeit.default_timer()
+    start = timeit.default_timer()
     conf = SparkConf().setAppName('G39HW3')
     sc = SparkContext(conf=conf)
-
     inputPointsRDD = sc.textFile(inputPath).map(
         splitLine).repartition(L).cache()
-    # # Read file into RDD
-    # lines = sc.textFile(inputPath)
+    stop = timeit.default_timer()
 
-    # # Call collect() to get all data
-    # inputPointsRDD = lines.collect()
-
-    # works in local not on server
-    # inputPoints = readTuplesSeq(inputPath)
-    # inputPointsRDD = sc.parallelize(inputPoints, L).cache()
-    # stop = timeit.default_timer()
-
-    # print("\nNumber of points = {}".format(len(inputPoints)))
-    # print("\nk = {}".format(k))
-    # print("\nL = {}".format(L))
-    # print("\nInitialization time = {}".format(stop - start))
-    print("\nAverage distance = {}".format(
+    print("\nNumber of points = {}".format(len(inputPointsRDD.collect())))
+    print("\nk = {}".format(k))
+    print("\nL = {}".format(L))
+    print("\nInitialization time = {}".format(stop - start))
+    print("Average distance = {}".format(
         measure(runMapReduce(inputPointsRDD, k, L))))
