@@ -12,21 +12,31 @@ import timeit
 
 from pyspark import SparkConf, SparkContext, TaskContext
 
-# Compute the squared euclidean distance (to avoid a sqrt computation)
+TESTING = True
 
 
 def squared_euclidean_dist(p, q):
+    """
+    Compute the squared euclidean distance (to avoid a sqrt computation)
+    :param p: first point
+    :param q: second point
+    :return: distance value
+    """
     tmp = 0
-    for i in range(0, len(p)):
-        tmp = tmp + (p[i]-q[i])**2
+    for i in range(len(p)):
+        tmp += (p[i]-q[i])**2
     return tmp
-
-# runSequential receives a list of tuples and an integer k.
-# It comptues a 2-approximation of k points for diversity maximization
-# based on matching.
 
 
 def runSequential(points, k):
+    """
+     runSequential receives a list of tuples and an integer k.
+     It comptues a 2-approximation of k points for diversity maximization
+     based on matching.
+    :param points: list of tuples
+    :param k: integer
+    :return:
+    """
 
     n = len(points)
     if k >= n:
@@ -41,9 +51,9 @@ def runSequential(points, k):
         maxI = 0
         maxJ = 0
         for i in range(n):
-            if candidates[i] == True:  # Check if i is already a solution
+            if candidates[i]:  # Check if i is already a solution
                 for j in range(i+1, n):
-                    if candidates[j] == True:  # Check if j is already a solution
+                    if candidates[j]:  # Check if j is already a solution
                         # use squared euclidean distance to avoid an sqrt computation!
                         d = squared_euclidean_dist(points[i], points[j])
                         if d > maxDist:
@@ -59,7 +69,7 @@ def runSequential(points, k):
     # the input points looking for a point not in the result set.
     if k % 2 != 0:
         for i in range(n):
-            if candidates[i] == True:
+            if candidates[i]:
                 result.append(points[i])
                 break
 
@@ -72,8 +82,7 @@ def quad_distance(p1, p2):
     :param p2: a tuple of numbers, with the same length of p1
     :return: squared distance between the points, zero if the tuple have no elements
     """
-    assert len(p1) == len(
-        p2), "input points must have the same num of components"
+    assert len(p1) == len(p2), "input points must have the same num of components"
     dist = 0
     for i in range(len(p1)):
         dist += (p1[i] - p2[i])*(p1[i] - p2[i])
@@ -150,15 +159,17 @@ def runMapReduce(pointsRDD, k, L):
     """
     kCenterMPD = set_kCenterMDP(k)  # setup a kCenterMPD function with k as number of centroids
     start = timeit.default_timer()
-    # action collect to force spark execution and to save points for round 2
-    coreset = pointsRDD.mapPartitions(kCenterMPD).collect()
+    # collect action force spark execution and save points for round 2
+    coreset = pointsRDD.repartition(L).mapPartitions(kCenterMPD).collect()
     stop = timeit.default_timer()
-    print("Runtime of Round 1 = {}".format(stop-start))
+    t1 = stop-start
+    # print("Runtime of Round 1 = {}".format(t1))
     start = timeit.default_timer()
     coreset = runSequential(coreset, k)  # no action required cause it's not spark
     stop = timeit.default_timer()
-    print("Runtime of Round 2 = {}".format(stop-start))
-    return coreset
+    t2 = stop-start
+    # print("Runtime of Round 2 = {}".format(t2))
+    return coreset, t1, t2
 
 
 def measure(pointsSet):
@@ -182,7 +193,11 @@ def measure(pointsSet):
 if __name__ == "__main__":
 
     # Check cmd line param, spark setup
-    assert len(sys.argv) == 4, "Usage: python G39HW3.py <path-to-file> <k> <L>"
+    if TESTING:
+        num_executor = sys.argv[4]
+        test_id = sys.argv[5]
+    else:
+        assert len(sys.argv) == 4, "Usage: python G39HW3.py <path-to-file> <k> <L>"
 
     k = sys.argv[2]  # Diversity maximization parameter
     assert k.isdigit(), "K must be an integer"
@@ -200,12 +215,20 @@ if __name__ == "__main__":
     sc = SparkContext(conf=conf)
     start = timeit.default_timer()
     # cache to improve performance
-    inputPointsRDD = sc.textFile(inputPath).map(splitLine).repartition(L).cache()
+    inputPointsRDD = sc.textFile(inputPath, L).map(splitLine).cache()
     num_of_points = inputPointsRDD.count()  # force spark execution
     stop = timeit.default_timer()
+    init_time = stop - start
+    centers, t1, t2 = runMapReduce(inputPointsRDD, k, L)
+    avg_dist = measure(centers)
 
-    print("\nNumber of points = {}".format(num_of_points))
-    print("k = {}".format(k))
-    print("L = {}".format(L))
-    print("Initialization time = {}".format(stop - start))
-    print("Average distance = {}".format(measure(runMapReduce(inputPointsRDD, k, L))))
+    if TESTING:
+        print("{},{},{},{},{},{},{},{},{}".format(inputPath.split("/")[-1], k, L, num_executor, init_time, t1, t2, avg_dist, test_id))
+    else:
+        print("\nNumber of points = {}".format(num_of_points))
+        print("k = {}".format(k))
+        print("L = {}".format(L))
+        print("Initialization time = {}".format(init_time))
+        print("Runtime of Round 1 = {}".format(t1))
+        print("Runtime of Round 2 = {}".format(t2))
+        print("Average distance = {}".format(avg_dist))
