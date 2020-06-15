@@ -95,16 +95,12 @@ def splitLine(i):
     return tuple(float(dim) for dim in line)
 
 
-def readTuplesSeq(inputfile):
-    points = list()
-    f = open(inputfile, "r")
-    if f.mode == "r":
+def file_len(fname):
+    with open(fname) as f:
+        counter = 0
         for i in f:
-            line = i.split(",")
-            t = tuple(float(dim) for dim in line)
-            points.append(t)
-    f.close()
-    return points
+            counter += 1
+        return counter
 
 
 def set_kCenterMDP(k):
@@ -215,7 +211,7 @@ if __name__ == "__main__":
         splitLine).repartition(L).cache()
     stop = timeit.default_timer()
 
-    print("\nNumber of points = {}".format(len(inputPointsRDD.collect())))
+    print("\nNumber of points = {}".format(file_len(inputPath)))
     print("\nk = {}".format(k))
     print("\nL = {}".format(L))
     print("\nInitialization time = {}".format(stop - start))

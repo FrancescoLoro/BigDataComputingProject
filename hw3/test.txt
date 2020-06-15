@@ -1,0 +1,11 @@
+
+Number of points = 1012
+
+k = 3
+
+L = 3
+
+Initialization time = 7.166335516999999
+Runtime of Round 1 = 0.001249711999999903
+Runtime of Round 2 = 1.6581742310000003
+Average distance = 0.6665810864796438
