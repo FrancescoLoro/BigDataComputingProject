@@ -95,14 +95,6 @@ def splitLine(i):
     return tuple(float(dim) for dim in line)
 
 
-def file_len(fname):
-    with open(fname) as f:
-        counter = 0
-        for i in f:
-            counter += 1
-        return counter
-
-
 def set_kCenterMDP(k):
     def tmp(S):
         """
@@ -211,7 +203,7 @@ if __name__ == "__main__":
         splitLine).repartition(L).cache()
     stop = timeit.default_timer()
 
-    print("\nNumber of points = {}".format(file_len(inputPath)))
+    print("\nNumber of points = {}".format(inputPointsRDD.count()))
     print("\nk = {}".format(k))
     print("\nL = {}".format(L))
     print("\nInitialization time = {}".format(stop - start))
