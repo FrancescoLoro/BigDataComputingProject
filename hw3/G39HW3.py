@@ -148,14 +148,14 @@ def runMapReduce(pointsRDD, k, L):
         :param L: number of partitions
         :return: list of tuples of extracted points
     """
-    kCenterMPD = set_kCenterMDP(
-        k)  # setup a kCenterMPD function with k as number of centroid
+    kCenterMPD = set_kCenterMDP(k)  # setup a kCenterMPD function with k as number of centroids
     start = timeit.default_timer()
-    coreset = pointsRDD.mapPartitions(kCenterMPD)
+    # action collect to force spark execution and to save points for round 2
+    coreset = pointsRDD.mapPartitions(kCenterMPD).collect()
     stop = timeit.default_timer()
     print("Runtime of Round 1 = {}".format(stop-start))
     start = timeit.default_timer()
-    coreset = runSequential(coreset.collect(), k)
+    coreset = runSequential(coreset, k)  # no action required cause it's not spark
     stop = timeit.default_timer()
     print("Runtime of Round 2 = {}".format(stop-start))
     return coreset
@@ -196,16 +196,16 @@ if __name__ == "__main__":
     # assert os.path.isfile(inputPath), "File or folder not found"
 
     # spark initilization
-    start = timeit.default_timer()
     conf = SparkConf().setAppName('G39HW3')
     sc = SparkContext(conf=conf)
-    inputPointsRDD = sc.textFile(inputPath).map(
-        splitLine).repartition(L).cache()
+    start = timeit.default_timer()
+    # cache to improve performance
+    inputPointsRDD = sc.textFile(inputPath).map(splitLine).repartition(L).cache()
+    num_of_points = inputPointsRDD.count()  # force spark execution
     stop = timeit.default_timer()
 
-    print("\nNumber of points = {}".format(inputPointsRDD.count()))
-    print("\nk = {}".format(k))
-    print("\nL = {}".format(L))
-    print("\nInitialization time = {}".format(stop - start))
-    print("Average distance = {}".format(
-        measure(runMapReduce(inputPointsRDD, k, L))))
+    print("\nNumber of points = {}".format(num_of_points))
+    print("k = {}".format(k))
+    print("L = {}".format(L))
+    print("Initialization time = {}".format(stop - start))
+    print("Average distance = {}".format(measure(runMapReduce(inputPointsRDD, k, L))))
