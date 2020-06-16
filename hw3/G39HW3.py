@@ -12,7 +12,7 @@ import timeit
 
 from pyspark import SparkConf, SparkContext, TaskContext
 
-TESTING = True
+TESTING = False
 
 
 def squared_euclidean_dist(p, q):
