@@ -158,12 +158,14 @@ def runMapReduce(pointsRDD, k, L):
         :return: list of tuples of extracted points
     """
     kCenterMPD = set_kCenterMDP(k)  # setup a kCenterMPD function with k as number of centroids
+
     start = timeit.default_timer()
     # collect action force spark execution and save points for round 2
     coreset = pointsRDD.repartition(L).mapPartitions(kCenterMPD).collect()
     stop = timeit.default_timer()
     t1 = stop-start
     # print("Runtime of Round 1 = {}".format(t1))
+
     start = timeit.default_timer()
     coreset = runSequential(coreset, k)  # no action required cause it's not spark
     stop = timeit.default_timer()
@@ -219,8 +221,8 @@ if __name__ == "__main__":
     num_of_points = inputPointsRDD.count()  # force spark execution
     stop = timeit.default_timer()
     init_time = stop - start
-    centers, t1, t2 = runMapReduce(inputPointsRDD, k, L)
-    avg_dist = measure(centers)
+    coreset, t1, t2 = runMapReduce(inputPointsRDD, k, L)
+    avg_dist = measure(coreset)
 
     if TESTING:
         print("{},{},{},{},{},{},{},{},{}".format(inputPath.split("/")[-1], k, L, num_executor, init_time, t1, t2, avg_dist, test_id))
